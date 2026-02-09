@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookshelf Author Match</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #2c1810 0%, #4a2c1a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+        }
+
+        .bookshelf {
+            width: 300px;
+            height: 200px;
+            background: #3d2817;
+            border: 4px solid #2a1810;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s;
+            position: relative;
+        }
+
+        .bookshelf:hover {
+            transform: scale(1.05);
+        }
+
+        .bookshelf::before {
+            content: '';
+            position: absolute;
+            bottom: 20px;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: #2a1810;
+        }
+
+        .bookshelf::after {
+            content: '';
+            position: absolute;
+            bottom: 60px;
+            left: 10%;
+            right: 10%;
+            height: 3px;
+            background: #2a1810;
+        }
+
+        .shelf-text {
+            color: #d4a574;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .game-area {
+            display: none;
+        }
+
+        .game-area.active {
+            display: block;
+        }
+
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+
+        .book {
+            width: 120px;
+            height: 180px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .book:hover {
+            transform: translateY(-5px);
+        }
+
+        .book-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .author-slot {
+            min-height: 50px;
+            background: rgba(255,255,255,0.2);
+            border: 2px dashed rgba(255,255,255,0.4);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            transition: background 0.3s;
+        }
+
+        .author-slot.drag-over {
+            background: rgba(255,255,255,0.4);
+            border-color: white;
+        }
+
+        .author-slot.correct {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+        }
+
+        .authors-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            margin: 0 20px;
+        }
+
+        .author-tag {
+            background: #d4a574;
+            color: #2c1810;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: move;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+            user-select: none;
+        }
+
+        .author-tag:hover {
+            transform: scale(1.05);
+        }
+
+        .author-tag.dragging {
+            opacity: 0.5;
+        }
+
+        .author-tag.placed {
+            display: none;
+        }
+
+        .congratulations {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .congratulations.show {
+            display: block;
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .congratulations h1 {
+            color: #4CAF50;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .congratulations p {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall 3s linear;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .reset-btn {
+            background: #d4a574;
+            color: #2c1810;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="bookshelf" id="bookshelf">
+            <div class="shelf-text">📚 Tap the Bookshelf</div>
+        </div>
+
+        <div class="game-area" id="gameArea">
+            <div class="books-grid" id="booksGrid"></div>
+            <div class="authors-container" id="authorsContainer"></div>
+        </div>
+
+        <div class="congratulations" id="congratulations">
+            <h1>🎉 Congratulations! 🎉</h1>
+            <p>You matched all the authors correctly!</p>
+            <button class="reset-btn" onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const allBooks = [
+            { title: "To Kill a Mockingbird", author: "Harper Lee", color: "#8b4513" },
+            { title: "1984", author: "George Orwell", color: "#2c3e50" },
+            { title: "Pride and Prejudice", author: "Jane Austen", color: "#c71585" },
+            { title: "The Great Gatsby", author: "F. Scott Fitzgerald", color: "#1e90ff" },
+            { title: "Harry Potter", author: "J.K. Rowling", color: "#8b0000" },
+            { title: "The Hobbit", author: "J.R.R. Tolkien", color: "#228b22" },
+            { title: "The Catcher in the Rye", author: "J.D. Salinger", color: "#cd5c5c" },
+            { title: "Brave New World", author: "Aldous Huxley", color: "#4682b4" },
+            { title: "The Lord of the Rings", author: "J.R.R. Tolkien", color: "#006400" },
+            { title: "Animal Farm", author: "George Orwell", color: "#8b0000" },
+            { title: "Moby Dick", author: "Herman Melville", color: "#191970" },
+            { title: "The Chronicles of Narnia", author: "C.S. Lewis", color: "#ffd700" },
+            { title: "Wuthering Heights", author: "Emily Brontë", color: "#800080" },
+            { title: "Jane Eyre", author: "Charlotte Brontë", color: "#8b008b" },
+            { title: "The Odyssey", author: "Homer", color: "#b8860b" },
+            { title: "Crime and Punishment", author: "Fyodor Dostoevsky", color: "#2f4f4f" },
+            { title: "War and Peace", author: "Leo Tolstoy", color: "#8b4513" },
+            { title: "The Divine Comedy", author: "Dante Alighieri", color: "#ff4500" },
+            { title: "Don Quixote", author: "Miguel de Cervantes", color: "#daa520" },
+            { title: "Hamlet", author: "William Shakespeare", color: "#483d8b" },
+            { title: "The Iliad", author: "Homer", color: "#cd853f" },
+            { title: "Frankenstein", author: "Mary Shelley", color: "#556b2f" },
+            { title: "Dracula", author: "Bram Stoker", color: "#8b0000" },
+            { title: "The Picture of Dorian Gray", author: "Oscar Wilde", color: "#9370db" },
+            { title: "Alice's Adventures in Wonderland", author: "Lewis Carroll", color: "#ff69b4" },
+            { title: "The Little Prince", author: "Antoine de Saint-Exupéry", color: "#87ceeb" },
+            { title: "One Hundred Years of Solitude", author: "Gabriel García Márquez", color: "#cd5c5c" },
+            { title: "The Alchemist", author: "Paulo Coelho", color: "#daa520" },
+            { title: "Beloved", author: "Toni Morrison", color: "#8b4789" },
+            { title: "The Handmaid's Tale", author: "Margaret Atwood", color: "#dc143c" }
+        ];
+
+        let books = [];
+
+        // Function to get 6 random books
+        function getRandomBooks() {
+            const shuffled = [...allBooks].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, 6);
+        }
+
+        let draggedAuthor = null;
+        let correctMatches = 0;
+
+        document.getElementById('bookshelf').addEventListener('click', function() {
+            this.style.display = 'none';
+            document.getElementById('gameArea').classList.add('active');
+            initializeGame();
+        });
+
+        function initializeGame() {
+            // Get 6 random books for this game
+            books = getRandomBooks();
+            
+            const booksGrid = document.getElementById('booksGrid');
+            const authorsContainer = document.getElementById('authorsContainer');
+            
+            // Shuffle authors
+            const shuffledAuthors = [...books.map(b => b.author)].sort(() => Math.random() - 0.5);
+            
+            // Create books
+            books.forEach((book, index) => {
+                const bookDiv = document.createElement('div');
+                bookDiv.className = 'book';
+                bookDiv.style.background = book.color;
+                bookDiv.dataset.author = book.author;
+                bookDiv.innerHTML = `
+                    <div class="book-title">${book.title}</div>
+                    <div class="author-slot" data-book-index="${index}">
+                        Drop author here
+                    </div>
+                `;
+                booksGrid.appendChild(bookDiv);
+            });
+
+            // Create author tags
+            shuffledAuthors.forEach(author => {
+                const authorTag = document.createElement('div');
+                authorTag.className = 'author-tag';
+                authorTag.draggable = true;
+                authorTag.textContent = author;
+                authorTag.dataset.author = author;
+                authorsContainer.appendChild(authorTag);
+
+                // Drag events for author tags
+                authorTag.addEventListener('dragstart', handleDragStart);
+                authorTag.addEventListener('dragend', handleDragEnd);
+            });
+
+            // Add drop events to author slots
+            document.querySelectorAll('.author-slot').forEach(slot => {
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('drop', handleDrop);
+                slot.addEventListener('dragleave', handleDragLeave);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedAuthor = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('drag-over');
+            return false;
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            this.classList.remove('drag-over');
+            
+            const bookAuthor = this.closest('.book').dataset.author;
+            const droppedAuthor = draggedAuthor.dataset.author;
+            
+            // Check if already has an author
+            if (this.querySelector('.author-tag')) {
+                return false;
+            }
+            
+            // Place the author
+            this.innerHTML = '';
+            const clonedAuthor = draggedAuthor.cloneNode(true);
+            clonedAuthor.draggable = false;
+            clonedAuthor.style.cursor = 'pointer';
+            clonedAuthor.addEventListener('click', removeAuthorFromSlot);
+            this.appendChild(clonedAuthor);
+            
+            draggedAuthor.classList.add('placed');
+            
+            // Check if correct
+            if (bookAuthor === droppedAuthor) {
+                this.classList.add('correct');
+                correctMatches++;
+                
+                if (correctMatches === books.length) {
+                    setTimeout(showCongratulations, 500);
+                }
+            }
+            
+            return false;
+        }
+
+        function removeAuthorFromSlot(e) {
+            const authorTag = e.target;
+            const slot = authorTag.parentElement;
+            const authorName = authorTag.dataset.author;
+            
+            // Find the original author tag in the container
+            const originalAuthor = document.querySelector(`.authors-container .author-tag[data-author="${authorName}"]`);
+            
+            // If it was correct, decrease the count
+            if (slot.classList.contains('correct')) {
+                correctMatches--;
+                slot.classList.remove('correct');
+            }
+            
+            // Remove from slot
+            slot.innerHTML = 'Drop author here';
+            
+            // Show the original author tag again
+            if (originalAuthor) {
+                originalAuthor.classList.remove('placed');
+            }
+        }
+
+        function showCongratulations() {
+            document.getElementById('congratulations').classList.add('show');
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * window.innerWidth + 'px';
+                    confetti.style.top = '-10px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        function resetGame() {
+            document.getElementById('congratulations').classList.remove('show');
+            document.getElementById('booksGrid').innerHTML = '';
+            document.getElementById('authorsContainer').innerHTML = '';
+            document.getElementById('gameArea').classList.remove('active');
+            document.getElementById('bookshelf').style.display = 'flex';
+            correctMatches = 0;
+        }
+    </script>
+</body>
+</html>
